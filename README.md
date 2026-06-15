@@ -4,6 +4,14 @@ An end-to-end data engineering project simulating a renewable energy intelligenc
 
 ---
 
+# Renewable Energy Data Engineering Platform
+
+## 🌐 Live Demo
+
+https://renewable-energy-platform-svbmhnitvhsdpkxo4j3m25.streamlit.app/
+
+(Screenshots attached at the last)
+
 ## 🚀 Project Overview
 
 This project builds a modern **lakehouse architecture pipeline** that:
@@ -117,3 +125,16 @@ Real-world analytics
 📜 License
 
 Free to use for learning and portfolio purposes.
+
+
+##SCREENSHOTS
+
+![German Renewable Energy Map](image-1.png)
+
+![City Wise energy potential](image-2.png)
+
+![Solar vs Wind Energy Comparisom](image-3.png)
+
+![Hourly Energy Pattern](image-4.png)
+
+![Seasonal Energy Trend](image-5.png)
