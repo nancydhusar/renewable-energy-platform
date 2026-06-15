@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+.venv/
+
+# Data lake (VERY IMPORTANT for your project)
+lakehouse/
+*.parquet
+
+# Streamlit cache
+.streamlit/
+
+# OS files
+.DS_Store
+Thumbs.db
