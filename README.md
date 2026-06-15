@@ -19,7 +19,14 @@ This project builds a modern **lakehouse architecture pipeline** that:
 
 ## 🏗️ Architecture
 
+This project follows a **Medallion-style Lakehouse Architecture** combined with **streaming ingestion via Kafka** and batch processing.
+
 API + Kafka → Bronze → Silver → Gold → DuckDB → Streamlit Dashboard
+
+```mermaid 
+![Architecture](assets/architecture.png)
+
+I designed a medallion architecture with Kafka ingestion, lakehouse storage in bronze-silver-gold layers, and DuckDB analytics powering a Streamlit geospatial dashboard.
 
 ---
 
