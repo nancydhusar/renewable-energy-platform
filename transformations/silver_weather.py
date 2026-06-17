@@ -1,6 +1,10 @@
 import duckdb
 import pandas as pd
 import os
+from quality_checks.validate_weather import validate_weather_data
+import sys
+
+sys.path.append(os.path.abspath("."))
 
 RAW_PATHS = [
     "lakehouse/weather/**/*.parquet",
@@ -9,6 +13,23 @@ RAW_PATHS = [
 SILVER_PATH = "lakehouse/silver/weather/"
 
 os.makedirs(SILVER_PATH, exist_ok=True)
+
+# ------------------------------
+# Run Validation Checks
+# ------------------------------
+df = duckdb.query("""
+    SELECT *
+    FROM read_parquet([
+        'lakehouse/weather/**/*.parquet',
+        'lakehouse/weather_historical/*.parquet'
+    ], union_by_name=true)
+""").df()
+
+# -----------------------------
+# VALIDATION STEP (NEW)
+# -----------------------------
+validate_weather_data(df)
+
 
 # Load raw data
 df = duckdb.query("""
@@ -70,7 +91,7 @@ df["wind_category"] = df["windspeed"].apply(
 # 5. SORT DATA
 # -----------------------------
 df = df.sort_values(by=["city", "event_time"])
-
+df = df.drop_duplicates(subset=["city", "event_time"], keep="last")
 print("Clean records:", len(df))
 
 # -----------------------------
