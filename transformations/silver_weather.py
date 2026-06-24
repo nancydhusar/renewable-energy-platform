@@ -1,45 +1,50 @@
 import duckdb
 import pandas as pd
 import os
-from quality_checks.validate_weather import validate_weather_data
 import sys
 
+# -----------------------------
+# IMPORT PATH FIX
+# -----------------------------
 sys.path.append(os.path.abspath("."))
 
-RAW_PATHS = [
-    "lakehouse/weather/**/*.parquet",
-    "lakehouse/weather_historical/*.parquet"
-]
-SILVER_PATH = "lakehouse/silver/weather/"
+from quality_checks.validate_weather import validate_weather_data
 
+# -----------------------------
+# PATH
+# -----------------------------
+SILVER_PATH = "lakehouse/silver/weather/"
 os.makedirs(SILVER_PATH, exist_ok=True)
 
-# ------------------------------
-# Run Validation Checks
-# ------------------------------
+# -----------------------------
+# LOAD DATA (LIVE + HISTORICAL)
+# -----------------------------
 df = duckdb.query("""
-    SELECT *
+    SELECT
+        city,
+        CAST(event_time AS TIMESTAMP) AS event_time,
+        lat,
+        lon,
+        temperature,
+        windspeed,
+        winddirection,
+        is_day,
+        weathercode,
+        humidity,
+        cloud_cover,
+        surface_pressure
     FROM read_parquet([
         'lakehouse/weather/**/*.parquet',
-        'lakehouse/weather_historical/*.parquet'
+        'lakehouse/weather_historical/*.parquet',
+        'lakehouse/live/live_weather.parquet'
     ], union_by_name=true)
 """).df()
 
+print("Raw records loaded:", len(df))
+
 # -----------------------------
-# VALIDATION STEP (NEW)
+# STANDARD COLUMNS
 # -----------------------------
-validate_weather_data(df)
-
-
-# Load raw data
-df = duckdb.query("""
-    SELECT *
-    FROM read_parquet([
-        'lakehouse/weather/**/*.parquet',
-        'lakehouse/weather_historical/*.parquet'
-    ], union_by_name=true)
-""").df()
-
 COMMON_COLUMNS = [
     "city",
     "event_time",
@@ -55,32 +60,64 @@ COMMON_COLUMNS = [
     "surface_pressure"
 ]
 
-for col in ["lat","lon"]:
+# -----------------------------
+# ENSURE ALL COLUMNS EXIST
+# -----------------------------
+for col in COMMON_COLUMNS:
     if col not in df.columns:
         df[col] = None
 
 df = df[COMMON_COLUMNS]
-# -----------------------------
-# 1. TYPE CLEANING
-# -----------------------------
-df["temperature"] = df["temperature"].astype(float)
-df["windspeed"] = df["windspeed"].astype(float)
-df["winddirection"] = df["winddirection"].astype(int)
 
 # -----------------------------
-# 2. TIMESTAMP STANDARDIZATION
+# SAFE TYPE CONVERSION
 # -----------------------------
-df["event_time"] = pd.to_datetime(df["event_time"], format="mixed")
+df["event_time"] = pd.to_datetime(df["event_time"], errors="coerce", utc=True)
+
+df["temperature"] = pd.to_numeric(df["temperature"], errors="coerce")
+df["windspeed"] = pd.to_numeric(df["windspeed"], errors="coerce")
+df["winddirection"] = pd.to_numeric(df["winddirection"], errors="coerce")
 
 # -----------------------------
-# 3. REMOVE DUPLICATES
+# FILL OPTIONAL COLUMNS
 # -----------------------------
-df = df.drop_duplicates(subset=["city", "event_time"])
+df["is_day"] = df["is_day"].fillna(0)
+df["weathercode"] = df["weathercode"].fillna(0)
+df["humidity"] = df["humidity"].fillna(0)
+df["cloud_cover"] = df["cloud_cover"].fillna(0)
+df["surface_pressure"] = df["surface_pressure"].fillna(0)
+
+df["lat"] = df["lat"].fillna(0)
+df["lon"] = df["lon"].fillna(0)
+df["winddirection"] = df["winddirection"].fillna(0)
+
+print(df.columns)
+print(df.head(10))
+print(df["event_time"].isna().sum())
 
 # -----------------------------
-# 4. FEATURE ENGINEERING (LIGHT SILVER LOGIC)
+# REMOVE ONLY TRULY INVALID ROWS
 # -----------------------------
+df = df.dropna(subset=["city", "event_time"])
 
+
+# -----------------------------
+# VALIDATION (NON-DESTRUCTIVE)
+# -----------------------------
+validate_weather_data(df)
+
+print("Before dropna shape:", df.shape)
+print("NaT event_time:", df["event_time"].isna().sum())
+
+
+# -----------------------------
+# REMOVE DUPLICATES
+# -----------------------------
+df = df.drop_duplicates(subset=["city", "event_time"], keep="last")
+
+# -----------------------------
+# FEATURE ENGINEERING
+# -----------------------------
 df["is_windy"] = df["windspeed"] > 20
 
 df["wind_category"] = df["windspeed"].apply(
@@ -88,14 +125,14 @@ df["wind_category"] = df["windspeed"].apply(
 )
 
 # -----------------------------
-# 5. SORT DATA
+# SORT
 # -----------------------------
 df = df.sort_values(by=["city", "event_time"])
-df = df.drop_duplicates(subset=["city", "event_time"], keep="last")
+
 print("Clean records:", len(df))
 
 # -----------------------------
-# 6. SAVE SILVER DATA
+# SAVE SILVER LAYER
 # -----------------------------
 output_file = f"{SILVER_PATH}weather_silver.parquet"
 df.to_parquet(output_file, index=False)

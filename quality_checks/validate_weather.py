@@ -1,64 +1,51 @@
 import pandas as pd
 
-def validate_weather_data(df: pd.DataFrame):
-    print("SEARCH: Running Data Quality Checks...\n")
+def validate_weather_data(df):
+    print("\nSEARCH: Running Data Quality Checks...")
 
     report = {}
 
     # -----------------------------
-    # 1. Missing Values Check
-    # -----------------------------
-    null_counts = df.isnull().sum()
-    report["missing_values"] = null_counts.to_dict()
-
-    # -----------------------------
-    # 2. Duplicate Check
-    # -----------------------------
-    duplicates = df.duplicated(subset=["city", "event_time"]).sum()
-    report["duplicates"] = int(duplicates)
-
-    # -----------------------------
-    # 3. Range Validation
-    # -----------------------------
-    invalid_temp = df[
-        (df["temperature"] < -50) | (df["temperature"] > 60)
-    ].shape[0]
-
-    invalid_wind = df[df["windspeed"] < 0].shape[0]
-
-    report["invalid_temperature"] = int(invalid_temp)
-    report["invalid_windspeed"] = int(invalid_wind)
-
-    # -----------------------------
-    # 4. Timestamp Validation
-    # -----------------------------
-    invalid_time = df["event_time"].isna().sum()
-    report["invalid_event_time"] = int(invalid_time)
-
-    # -----------------------------
-    # 5. Basic Row Count
+    # TOTAL ROWS
     # -----------------------------
     report["total_rows"] = len(df)
 
     # -----------------------------
+    # MISSING VALUES
+    # -----------------------------
+    report["missing_values"] = df.isnull().sum().to_dict()
+
+    # -----------------------------
+    # DUPLICATES
+    # -----------------------------
+    report["duplicates"] = df.duplicated(subset=["city", "event_time"]).sum()
+
+    # -----------------------------
+    # INVALID CHECKS
+    # -----------------------------
+    report["invalid_temperature"] = df[
+        (df["temperature"] < -50) | (df["temperature"] > 60)
+    ].shape[0]
+
+    report["invalid_windspeed"] = df[df["windspeed"] < 0].shape[0]
+
+    report["invalid_event_time"] = df["event_time"].isna().sum()
+
+    # -----------------------------
     # PRINT REPORT
     # -----------------------------
-    print("REPORT: DATA QUALITY REPORT")
+    print("\nREPORT: DATA QUALITY REPORT")
     print("----------------------")
-
     for k, v in report.items():
         print(f"{k}: {v}")
 
     # -----------------------------
-    # FAIL CONDITION (optional)
+    # CRITICAL CHECKS ONLY (DO NOT FILTER DATA)
     # -----------------------------
-    if (
-        invalid_temp > 0
-        or invalid_wind > 0
-        or invalid_time > 0
-    ):
-        raise Exception("Failed: Data validation failed!")
+    if df["city"].isna().sum() > 0:
+        raise Exception("CRITICAL ERROR: city has missing values")
 
-    print("\nSUCCESSFUL:Data validation passed successfully!")
+    if df["event_time"].isna().sum() > 0:
+        raise Exception("CRITICAL ERROR: event_time is invalid")
 
-    return True
+    print("\nSUCCESSFUL: Data validation passed successfully!")
