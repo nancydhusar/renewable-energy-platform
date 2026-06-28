@@ -29,6 +29,9 @@ df["is_day"] = df["is_day"].fillna(0)
 df["weathercode"] = df["weathercode"].fillna(0)
 df["cloud_cover"] = df["cloud_cover"].fillna(0)
 
+# remove invalid timestamps
+df = df.dropna(subset=["event_time"])
+
 # -----------------------------
 # TIME FEATURES
 # -----------------------------
@@ -61,7 +64,7 @@ df.loc[df["weathercode"].isin([0, 1]), "solar_score"] += 30
 df.loc[df["weathercode"].isin([2, 3]), "solar_score"] -= 20
 
 df["solar_score"] += df["temperature"] * 1.2
-
+df["solar_score"] = df["solar_score"].fillna(0)
 df["solar_score"] = df["solar_score"].clip(0, 100)
 
 # -----------------------------
@@ -71,7 +74,7 @@ df["wind_energy_index"] = df["windspeed"] ** 3
 
 # avoid divide-by-zero
 max_wind = df["wind_energy_index"].max()
-df["wind_energy_norm"] = df["wind_energy_index"] / max_wind if max_wind != 0 else 0
+df["wind_energy_norm"] = df["wind_energy_index"] / max_wind if max_wind else 0
 
 df["wind_category"] = df["windspeed"].apply(
     lambda x: "low" if x < 10 else "medium" if x < 25 else "high"
@@ -93,19 +96,28 @@ df["energy_potential"] = (
 # -----------------------------
 df = df.sort_values(["city", "event_time"])
 
+# -----------------------------
+# ROLLING FEATURES
+# -----------------------------
 df["temp_6h_avg"] = (
     df.groupby("city")["temperature"]
-    .rolling(6)
+    .rolling(6, min_periods=1)
     .mean()
-    .reset_index(0, drop=True)
+    .reset_index(level=0, drop=True)
 )
-
 df["wind_24h_avg"] = (
     df.groupby("city")["windspeed"]
-    .rolling(24)
+    .rolling(24, min_periods=1)
     .mean()
-    .reset_index(0, drop=True)
+    .reset_index(level=0, drop=True)
 )
+
+
+# -----------------------------
+# ADD MAX TEMPERATURE PER CITY (NEW IMPORTANT FEATURE)
+# -----------------------------
+df["max_temperature_city"] = df.groupby("city")["temperature"].transform("max")
+
 
 # -----------------------------
 # ENERGY STABILITY INDEX
@@ -116,11 +128,12 @@ df["energy_stability_index"] = (
     ((100 - df["cloud_cover"]) * 0.2)
 )
 
+df["energy_stability_index"] = df["energy_stability_index"].fillna(0)
+
 # -----------------------------
 # FINAL CLEANUP
 # -----------------------------
-df = df.dropna(subset=["event_time"])
-df = df.drop_duplicates(subset=["city", "event_time"])
+df = df.drop_duplicates(subset=["city", "event_time"], keep="last")
 
 # -----------------------------
 # SAVE GOLD DATA
