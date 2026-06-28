@@ -23,6 +23,12 @@ def load_data():
 
 df = load_data()
 
+# -----------------------------
+# CLEAN SAFE DATA (IMPORTANT FIX)
+# -----------------------------
+df = df.dropna(subset=["city", "energy_potential"])
+df[["lat", "lon"]] = df[["lat", "lon"]].fillna(0)
+
 st.title("🌍 Germany Renewable Energy Intelligence Dashboard")
 
 st.markdown("Kafka + Lakehouse + DuckDB Analytics Layer")
@@ -30,30 +36,48 @@ st.markdown("Kafka + Lakehouse + DuckDB Analytics Layer")
 # -----------------------------
 # SIDEBAR FILTER
 # -----------------------------
-cities = df["city"].unique()
-selected_city = st.sidebar.multiselect("Select City", cities, default=list(cities))
+cities = sorted(df["city"].unique())
+selected_city = st.sidebar.multiselect(
+    "Select City",
+    cities,
+    default=cities
+)
 
 filtered_df = df[df["city"].isin(selected_city)]
 
 # -----------------------------
-# KPI SECTION
+# TOP INSIGHTS (NEW IMPROVEMENT)
 # -----------------------------
+st.subheader("🔥 Key Insights")
+
+top_city = (
+    filtered_df.groupby("city")["energy_potential"]
+    .mean()
+    .sort_values(ascending=False)
+    .head(1)
+)
+
+best_city = top_city.index[0] if len(top_city) > 0 else "N/A"
+
 col1, col2, col3 = st.columns(3)
 
-col1.metric("Avg Solar Score", round(filtered_df["solar_score"].mean(), 2))
-col2.metric("Avg Wind Energy", round(filtered_df["wind_energy_index"].mean(), 2))
-col3.metric("Avg Energy Potential", round(filtered_df["energy_potential"].mean(), 2))
+col1.metric("🏆 Best City", best_city)
+col2.metric("⚡ Avg Solar Score", round(filtered_df["solar_score"].mean(), 2))
+col3.metric("🌬 Avg Wind Energy", round(filtered_df["wind_energy_index"].mean(), 2))
 
 st.divider()
 
+# -----------------------------
+# MAP VIEW (SAFE VERSION FIXED)
+# -----------------------------
 st.subheader("🗺️ Germany Renewable Energy Map")
 
-# city-level aggregation
 map_df = filtered_df.groupby(
     ["city", "lat", "lon"]
 )[["energy_potential", "solar_score", "wind_energy_index"]].mean().reset_index()
 
-# map visualization
+map_df = map_df[(map_df["lat"] != 0) & (map_df["lon"] != 0)]
+
 fig = px.scatter_geo(
     map_df,
     lat="lat",
@@ -75,21 +99,23 @@ fig.update_geos(
 st.plotly_chart(fig, use_container_width=True)
 
 # -----------------------------
-# 1. CITY COMPARISON
+# CITY COMPARISON (SORTED FIX)
 # -----------------------------
 st.subheader("🌍 City-wise Energy Potential")
 
 city_df = filtered_df.groupby("city")["energy_potential"].mean().reset_index()
+city_df = city_df.sort_values("energy_potential", ascending=False)
 
-fig1 = px.bar(city_df, x="city", y="energy_potential", color="city")
+fig1 = px.bar(city_df, x="city", y="energy_potential", color="energy_potential")
 st.plotly_chart(fig1, use_container_width=True)
 
 # -----------------------------
-# 2. SOLAR VS WIND
+# SOLAR VS WIND (SORTED FIX)
 # -----------------------------
 st.subheader("🌞 Solar vs 🌬 Wind Energy Comparison")
 
 solar_wind = filtered_df.groupby("city")[["solar_score", "wind_energy_index"]].mean().reset_index()
+solar_wind = solar_wind.sort_values("solar_score", ascending=False)
 
 fig2 = px.line(
     solar_wind,
@@ -101,7 +127,7 @@ fig2 = px.line(
 st.plotly_chart(fig2, use_container_width=True)
 
 # -----------------------------
-# 3. HOURLY ENERGY PATTERN
+# HOURLY ENERGY PATTERN
 # -----------------------------
 st.subheader("⏰ Hourly Energy Pattern")
 
@@ -112,11 +138,12 @@ fig3 = px.line(hourly, x="hour", y="energy_potential", markers=True)
 st.plotly_chart(fig3, use_container_width=True)
 
 # -----------------------------
-# 4. SEASONAL ANALYSIS
+# SEASONAL ANALYSIS
 # -----------------------------
 st.subheader("🍂 Seasonal Energy Trends")
 
 season = filtered_df.groupby("season")["energy_potential"].mean().reset_index()
+season = season.sort_values("energy_potential", ascending=False)
 
 fig4 = px.bar(season, x="season", y="energy_potential", color="season")
 
