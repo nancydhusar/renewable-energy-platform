@@ -77,8 +77,12 @@ st.subheader("🗺️ Germany Renewable Energy Map")
 
 map_df = filtered_df.groupby(
     ["city", "lat", "lon"]
-)[["energy_potential", "solar_score", "wind_energy_index"]].mean().reset_index()
-
+)[[
+    "energy_potential",
+    "solar_score",
+    "wind_energy_index",
+    "temperature"
+]].mean().reset_index()
 map_df = map_df[(map_df["lat"] != 0) & (map_df["lon"] != 0)]
 
 fig = px.scatter_geo(
@@ -86,10 +90,16 @@ fig = px.scatter_geo(
     lat="lat",
     lon="lon",
     size="energy_potential",
-    color="solar_score",
+    color="temperature",
     hover_name="city",
+    hover_data={
+        "temperature": True,
+        "energy_potential": True,
+        "solar_score": True,
+        "wind_energy_index": True
+    },
     projection="natural earth",
-    title="Germany Energy Potential Map"
+    title = "Germany Energy + Temperature Map",
 )
 
 fig.update_geos(
@@ -97,6 +107,14 @@ fig.update_geos(
     center={"lat": 51, "lon": 10},
     showland=True,
     landcolor="lightgray"
+)
+
+fig.update_traces(
+    hovertemplate=
+    "<b>%{hovertext}</b><br>" +
+    "Temp: %{customdata[0]}°C<br>" +
+    "Energy: %{customdata[1]}<br>" +
+    "<extra></extra>"
 )
 
 st.plotly_chart(fig, use_container_width=True)
