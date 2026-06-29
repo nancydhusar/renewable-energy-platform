@@ -5,12 +5,30 @@ import os
 # -----------------------------
 # GERMANY CITIES CONFIG
 # -----------------------------
-CITIES = [
+CITIES = CITIES = [
     {"city": "Berlin", "lat": 52.52, "lon": 13.41},
     {"city": "Hamburg", "lat": 53.55, "lon": 10.00},
     {"city": "Munich", "lat": 48.13, "lon": 11.58},
     {"city": "Cologne", "lat": 50.94, "lon": 6.96},
-    {"city": "Frankfurt", "lat": 50.11, "lon": 8.68}
+    {"city": "Frankfurt", "lat": 50.11, "lon": 8.68},
+
+    {"city": "Stuttgart", "lat": 48.78, "lon": 9.18},
+    {"city": "Düsseldorf", "lat": 51.23, "lon": 6.78},
+    {"city": "Dortmund", "lat": 51.51, "lon": 7.46},
+    {"city": "Essen", "lat": 51.46, "lon": 7.01},
+    {"city": "Leipzig", "lat": 51.34, "lon": 12.37},
+
+    {"city": "Bremen", "lat": 53.08, "lon": 8.80},
+    {"city": "Dresden", "lat": 51.05, "lon": 13.74},
+    {"city": "Hanover", "lat": 52.37, "lon": 9.73},
+    {"city": "Nuremberg", "lat": 49.45, "lon": 11.08},
+    {"city": "Mannheim", "lat": 49.49, "lon": 8.47},
+
+    {"city": "Karlsruhe", "lat": 49.01, "lon": 8.40},
+    {"city": "Wiesbaden", "lat": 50.08, "lon": 8.24},
+    {"city": "Augsburg", "lat": 48.37, "lon": 10.90},
+    {"city": "Bonn", "lat": 50.74, "lon": 7.10},
+    {"city": "Münster", "lat": 51.96, "lon": 7.63}
 ]
 
 START_DATE = "2026-03-01"

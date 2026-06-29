@@ -42,12 +42,17 @@ df = duckdb.query("""
 
 print("Raw records loaded:", len(df))
 
+# 👇 ADD DEBUG HERE
+print("Unique cities:", df["city"].nunique())
+print(df["city"].value_counts())
+
 # -----------------------------
 # STANDARD COLUMNS
 # -----------------------------
 COMMON_COLUMNS = [
     "city",
     "event_time",
+    "ingestion_time",
     "lat",
     "lon",
     "temperature",
@@ -73,7 +78,19 @@ df = df[COMMON_COLUMNS]
 # SAFE TYPE CONVERSION
 # -----------------------------
 df["event_time"] = pd.to_datetime(df["event_time"], errors="coerce", utc=True)
+# Populate missing ingestion timestamps
+if "ingestion_time" not in df.columns:
+    df["ingestion_time"] = pd.Timestamp.now()
 
+df["ingestion_time"] = pd.to_datetime(
+    df["ingestion_time"],
+    errors="coerce"
+)
+
+# Fill null values
+df["ingestion_time"] = df["ingestion_time"].fillna(
+    pd.Timestamp.now()
+)
 df["temperature"] = pd.to_numeric(df["temperature"], errors="coerce")
 df["windspeed"] = pd.to_numeric(df["windspeed"], errors="coerce")
 df["winddirection"] = pd.to_numeric(df["winddirection"], errors="coerce")
@@ -109,12 +126,23 @@ validate_weather_data(df)
 print("Before dropna shape:", df.shape)
 print("NaT event_time:", df["event_time"].isna().sum())
 
+# Sort by latest ingestion time
+df = df.sort_values(
+    by=["city", "event_time", "ingestion_time"]
+)
 
 # -----------------------------
 # REMOVE DUPLICATES
 # -----------------------------
-df = df.drop_duplicates(subset=["city", "event_time"], keep="last")
-
+df = (
+    df.sort_values(
+        by=["city", "event_time", "ingestion_time"]
+    )
+    .drop_duplicates(
+        subset=["city", "event_time"],
+        keep="last"
+    )
+)
 # -----------------------------
 # FEATURE ENGINEERING
 # -----------------------------

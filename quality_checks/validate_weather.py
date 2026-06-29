@@ -1,3 +1,4 @@
+from duckdb import df
 import pandas as pd
 
 def validate_weather_data(df):
@@ -18,7 +19,22 @@ def validate_weather_data(df):
     # -----------------------------
     # DUPLICATES
     # -----------------------------
-    report["duplicates"] = df.duplicated(subset=["city", "event_time"]).sum()
+    duplicate_count = df.duplicated(
+        subset=["city", "event_time"]
+    ).sum()
+
+    report["duplicates"] = duplicate_count
+
+    duplicate_pct = round(
+        duplicate_count / len(df) * 100, 2
+    )
+
+    report["duplicate_percent"] = duplicate_pct
+
+    if duplicate_pct > 5:
+        print(
+            "WARNING: High duplicate percentage detected."
+        )
 
     # -----------------------------
     # INVALID CHECKS

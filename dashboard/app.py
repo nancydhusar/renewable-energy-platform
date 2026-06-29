@@ -21,6 +21,9 @@ def load_data():
     """).df()
     return df
 
+if st.button("🔄 Refresh Data"):
+    st.cache_data.clear()
+
 df = load_data()
 
 # -----------------------------
